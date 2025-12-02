@@ -1,0 +1,58 @@
+name: CI/CD - Deploy to GitHub Pages
+
+on:
+  push:
+    branches: ["main"]        # รันเมื่อ push ขึ้น main
+  pull_request:
+    branches: ["main"]        # รันเมื่อมี PR ไปที่ main
+
+  # ให้ deploy ด้วยมือได้จาก GitHub Actions tab
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20.x]    # ใช้ Node.js 20 (แนะนำล่าสุด)
+
+    steps:
+      # 1. Checkout โค้ด
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. ตั้งค่า Node.js
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'          # หรือ 'yarn' / 'pnpm' ตามที่คุณใช้
+
+      # 3. ติดตั้ง dependencies
+      - name: Install dependencies
+        run: npm ci                   # ใช้ npm ci เพื่อความสม่ำเสมอ (หรือ yarn install --frozen-lockfile)
+
+      # 4. Build โปรเจกต์
+      - name: Build
+        run: npm run build -- --base=/gooqle/   # สำคัญ! เปลี่ยนเป็นชื่อ repo คุณ
+        env:
+          CI: false                     # ป้องกัน warning treat as error ในบาง package
+
+      # 5. Deploy ไป GitHub Pages
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        if: github.ref == 'refs/heads/main'   # deploy เฉพาะเมื่อ push ไป main
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist                  # ถ้าใช้ Vite → dist
+          # publish_dir: ./build               # ถ้าใช้ CRA → build
+          cname: ''                             # ถ้ามี custom domain ใส่ตรงนี้ เช่น grok.mydomain.com
+          force_orphan: true
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+
+      # 6. แจ้งผลลัพธ์ (optional)
+      - name: Deploy Success Notification
+        if: success() && github.ref == 'refs/heads/main'
+        run: echo "Deployed successfully! https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
