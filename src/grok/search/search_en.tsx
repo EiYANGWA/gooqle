@@ -1,12 +1,13 @@
+// src/grok/search/search_en.tsx
 import { useState } from "react";
-import { Search, Sparkles } from "lucide-react";
+import { Search, Sparkles, ArrowUp } from "lucide-react";
 
 export default function SearchBar() {
   const [query, setQuery] = useState("");
   const [isFocused, setIsFocused] = useState(false);
 
   return (
-    <div className="w-full max-w-3xl mx-auto px-4 py-8 min-h-screen bg-gray-50 dark:bg-black">
+    <div className="w-full">
       <div
         className={`relative group transition-all duration-300 ease-out ${
           isFocused ? "shadow-2xl" : "shadow-lg"
@@ -19,14 +20,14 @@ export default function SearchBar() {
         <div className="flex items-center gap-3 px-6 py-4">
           {/* ไอคอนค้นหา */}
           <Search
-            className={`w-6 h-6 transition-colors ${
+            className={`w-6 h-6 transition-colors flex-shrink-0 ${
               isFocused
                 ? "text-blue-500"
                 : "text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300"
             }`}
           />
 
-          {/* ช่อง input */}
+          {/* Input */}
           <input
             type="text"
             value={query}
@@ -38,44 +39,55 @@ export default function SearchBar() {
             autoFocus
           />
 
-          {/* ไอคอน Sparkles (เหมือน Grok) */}
-          {query.length === 0 && (
-            <div className="flex items-center gap-2 text-gray-400">
-              <Sparkles className="w-5 h-5" />
-              <span className="text-sm font-medium hidden sm:block">Grok</span>
-            </div>
-          )}
+          {/* ส่วนขวาสุด: Sparkles หรือ ปุ่มส่ง */}
+          <div className="flex items-center gap-3">
+            {/* แสดง Sparkles + Grok เมื่อยังไม่พิมพ์ */}
+            {query.length === 0 && (
+              <div className="flex items-center gap-2 text-gray-400">
+                <Sparkles className="w-5 h-5" />
+                <span className="text-sm font-semibold hidden sm:block">Grok</span>
+              </div>
+            )}
 
-          {/* ปุ่มส่ง (แสดงเมื่อพิมพ์แล้ว) */}
-          {query.length > 0 && (
-            <kbd className="px-2 py-1 text-xs font-semibold text-gray-500 bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-              ⏎ Enter
-            </kbd>
-          )}
+            {/* แสดงปุ่มส่งเมื่อพิมพ์แล้ว – สวย ไม่เพี้ยน */}
+            {query.length > 0 && (
+              <div className="flex items-center gap-2 text-blue-500 font-medium">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/10">
+                  <ArrowUp className="w-4 h-4" />
+                </div>
+                <span className="hidden sm:block text-sm">Send</span>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* แถบแนะนำด้านล่าง (เหมือน Grok จริง) */}
+        {/* Suggestion pills */}
         {isFocused && query.length === 0 && (
-          <div className="border-t border-gray-200 dark:border-gray-700 px-6 py-3">
+          <div className="border-t border-gray-200 dark:border-gray-700 px-6 py-4">
             <div className="flex flex-wrap gap-2">
-              {["Explain quantum computing", "Write a poem about stars", "Best pizza in Bangkok?"].map(
-                (suggestion) => (
-                  <button
-                    key={suggestion}
-                    onClick={() => setQuery(suggestion)}
-                    className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors"
-                  >
-                    {suggestion}
-                  </button>
-                )
-              )}
+              {[
+                "Explain quantum computing",
+                "Write a poem about stars",
+                "Best pizza in Bangkok?",
+                "What's the meaning of life?",
+                "Generate an image of a cat astronaut",
+              ].map((suggestion) => (
+                <button
+                  key={suggestion}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => setQuery(suggestion)}
+                  className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-all duration-200 hover:scale-105 active:scale-95"
+                >
+                  {suggestion}
+                </button>
+              ))}
             </div>
           </div>
         )}
       </div>
 
-      {/* คำอธิบายด้านล่าง */}
-      <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-4">
+      {/* Footer */}
+      <p className="text-center text-xs text-gray-500 dark:text-gray-500 mt-3 font-medium">
         Grok 4 • Powered by xAI
       </p>
     </div>

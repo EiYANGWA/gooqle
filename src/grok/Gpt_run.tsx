@@ -1,9 +1,6 @@
-import SearchBar from "./search/search_en";
+// src/grok/Gpt_run.tsx
+import Layout from "./main_layout/layout";
 
 export default function GptRun() {
-  return (
-    <div >
-      <SearchBar />
-    </div>
-  );
+  return <Layout />;
 }
