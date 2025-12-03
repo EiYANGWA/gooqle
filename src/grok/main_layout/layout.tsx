@@ -1,4 +1,4 @@
-// src/grok/main_layout/layout.tsx ← ลื่นแบบมือถือบน PC จริง ๆ!
+// src/grok/main_layout/layout.tsx ← แก้บัค Fullscreen แล้ว + ลื่นสุด + เมนูครบ!
 import { Menu, X, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import SearchBar from "../search/search_en";
@@ -14,30 +14,56 @@ export default function Layout() {
   const startX = useRef(0);
   const scrollStart = useRef(0);
 
+  // ใช้ ref เพื่อเก็บค่า innerWidth ล่าสุด (ป้องกันบัค fullscreen)
+  const pageWidth = useRef(window.innerWidth);
+
+  const totalPages = 3;
+
+  // อัปเดต pageWidth ทุกครั้งที่ resize หรือ fullscreen เปลี่ยน
+  useEffect(() => {
+    const updateWidth = () => {
+      pageWidth.current = window.innerWidth;
+      // รีเฟรชหน้าปัจจุบันหลัง resize
+      if (containerRef.current) {
+        const page = Math.round(containerRef.current.scrollLeft / pageWidth.current);
+        setCurrentPage(Math.min(totalPages - 1, Math.max(0, page)));
+      }
+    };
+
+    window.addEventListener("resize", updateWidth);
+    document.addEventListener("fullscreenchange", updateWidth);
+
+    return () => {
+      window.removeEventListener("resize", updateWidth);
+      document.removeEventListener("fullscreenchange", updateWidth);
+    };
+  }, []);
+
   const scrollToPage = (index: number) => {
-    containerRef.current?.scrollTo({
-      left: index * window.innerWidth,
+    if (!containerRef.current) return;
+    containerRef.current.scrollTo({
+      left: index * pageWidth.current,
       behavior: "smooth",
     });
   };
 
+  // ติดตามหน้าปัจจุบันอย่างแม่นยำ (แม้ fullscreen)
   useEffect(() => {
-    const updatePage = () => {
-      if (!containerRef.current) return;
-      const page = Math.round(containerRef.current.scrollLeft / window.innerWidth);
-      setCurrentPage(Math.min(2, Math.max(0, page)));
-    };
     const container = containerRef.current;
-    container?.addEventListener("scroll", updatePage, { passive: true });
-    window.addEventListener("resize", updatePage);
-    updatePage();
-    return () => {
-      container?.removeEventListener("scroll", updatePage);
-      window.removeEventListener("resize", updatePage);
+    if (!container) return;
+
+    const updatePage = () => {
+      const page = Math.round(container.scrollLeft / pageWidth.current);
+      setCurrentPage(Math.min(totalPages - 1, Math.max(0, page)));
     };
+
+    container.addEventListener("scroll", updatePage, { passive: true });
+    updatePage(); // เรียกครั้งแรก
+
+    return () => container.removeEventListener("scroll", updatePage);
   }, []);
 
-  // ลากแบบมือถือบน PC
+  // ลากแบบมือถือบน PC (ลื่นสุด)
   const startDrag = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!containerRef.current || (e.target as HTMLElement).closest("button")) return;
     isDragging.current = true;
@@ -57,7 +83,9 @@ export default function Layout() {
     if (!isDragging.current || !containerRef.current) return;
     isDragging.current = false;
     containerRef.current.style.scrollBehavior = "smooth";
-    const page = Math.round(containerRef.current.scrollLeft / window.innerWidth);
+
+    // Snap อย่างแม่นยำโดยใช้ pageWidth ล่าสุด
+    const page = Math.round(containerRef.current.scrollLeft / pageWidth.current);
     scrollToPage(page);
   };
 
@@ -82,21 +110,35 @@ export default function Layout() {
                 Grok
               </span>
             </div>
-            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="md:hidden p-2 rounded-lg hover:bg-gray-900">
+
+            {/* Desktop Nav */}
+            <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
+              <button onClick={() => scrollToPage(0)} className="text-gray-300 hover:text-white transition">Home</button>
+              <button onClick={() => scrollToPage(1)} className="text-gray-300 hover:text-white transition">Explore</button>
+              <button onClick={() => scrollToPage(2)} className="text-gray-300 hover:text-white transition">About</button>
+            </nav>
+
+            {/* Hamburger */}
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="md:hidden p-2 rounded-lg hover:bg-gray-900 transition"
+            >
               {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
           </div>
+
+          {/* Mobile Menu */}
           {isMenuOpen && (
-            <div className="md:hidden border-t border-gray-800 bg-gray-950 px-4 py-4 space-y-3">
-              <a href="#" className="block py-2 text-gray-300 hover:text-white">Home</a>
-              <a href="#" className="block py-2 text-gray-300 hover:text-white">Explore</a>
-              <a href="#" className="block py-2 text-gray-300 hover:text-white">About</a>
+            <div className="md:hidden border-t border-gray-800 bg-gray-950 px-4 py-4 space-y-3 text-sm font-medium">
+              <button onClick={() => { scrollToPage(0); setIsMenuOpen(false); }} className="block w-full text-left py-2 text-gray-300 hover:text-white">Home</button>
+              <button onClick={() => { scrollToPage(1); setIsMenuOpen(false); }} className="block w-full text-left py-2 text-gray-300 hover:text-white">Explore</button>
+              <button onClick={() => { scrollToPage(2); setIsMenuOpen(false); }} className="block w-full text-left py-2 text-gray-300 hover:text-white">About</button>
             </div>
           )}
         </div>
       </header>
 
-      {/* Main – ลื่นแบบมือถือบน PC จริง ๆ */}
+      {/* Main Content */}
       <main className="flex-1 relative overflow-hidden">
         <div
           ref={containerRef}
@@ -111,20 +153,33 @@ export default function Layout() {
           <section className="w-screen h-full flex-shrink-0 snap-center"><AboutCard /></section>
         </div>
 
-        <button onClick={() => scrollToPage(currentPage - 1)} className="absolute left-6 top-1/2 -translate-y-1/2 z-20 w-14 h-14 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center hover:bg-white/20 active:scale-95 transition-all opacity-0 md:opacity-100 pointer-events-auto">
+        {/* Arrows */}
+        <button
+          onClick={() => scrollToPage(Math.max(0, currentPage - 1))}
+          className="absolute left-6 top-1/2 -translate-y-1/2 z-20 w-14 h-14 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center hover:bg-white/20 active:scale-95 transition-all opacity-0 md:opacity-100 pointer-events-auto"
+        >
           <ChevronLeft className="w-8 h-8" />
         </button>
-        <button onClick={() => scrollToPage(currentPage + 1)} className="absolute right-6 top-1/2 -translate-y-1/2 z-20 w-14 h-14 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center hover:bg-white/20 active:scale-95 transition-all opacity-0 md:opacity-100 pointer-events-auto">
+        <button
+          onClick={() => scrollToPage(Math.min(2, currentPage + 1))}
+          className="absolute right-6 top-1/2 -translate-y-1/2 z-20 w-14 h-14 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center hover:bg-white/20 active:scale-95 transition-all opacity-0 md:opacity-100 pointer-events-auto"
+        >
           <ChevronRight className="w-8 h-8" />
         </button>
 
+        {/* Dots */}
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-3 z-20 pointer-events-auto">
           {[0, 1, 2].map((i) => (
-            <button key={i} onClick={() => scrollToPage(i)} className={`w-3 h-3 rounded-full transition-all duration-300 ${currentPage === i ? "bg-white w-10" : "bg-white/40 hover:bg-white/70"}`} />
+            <button
+              key={i}
+              onClick={() => scrollToPage(i)}
+              className={`w-3 h-3 rounded-full transition-all duration-300 ${currentPage === i ? "bg-white w-10" : "bg-white/40 hover:bg-white/70"}`}
+            />
           ))}
         </div>
       </main>
 
+      {/* Search Bar */}
       <div className="sticky bottom-0 z-40 border-t border-gray-800 bg-black/90 backdrop-blur-2xl">
         <div className="max-w-4xl mx-auto px-4 py-6">
           <SearchBar />
